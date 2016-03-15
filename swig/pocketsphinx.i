@@ -82,12 +82,24 @@ typedef ngram_model_t NGramModelSet;
 %}
 #endif
 
+#if SWIGJAVASCRIPT
 %begin %{
-#include <pocketsphinx.h>
+#include <v8.h>
+#include <node.h>
+#include <node_buffer.h>
+%}
+#endif
 
+
+%begin %{
+
+#ifndef __cplusplus
 typedef int bool;
-#define false 0
 #define true 1
+#define false 0
+#endif
+
+#include <pocketsphinx.h>
 
 typedef ps_decoder_t Decoder;
 typedef ps_decoder_t SegmentList;
@@ -122,15 +134,19 @@ typedef struct {
 
 %}
 
+%nodefaultctor SegmentList;
+%nodefaultctor NBestList;
+
 sb_iterator(Segment, ps_seg, Segment)
 sb_iterator(NBest, ps_nbest, NBest)
-sb_iterable_java(SegmentList, Segment)
-sb_iterable_java(NBestList, NBest)
+sb_iterable(SegmentList, Segment, ps_seg, ps_seg_iter, Segment)
+sb_iterable(NBestList, NBest, ps_nbest, ps_nbest, NBest)
 
 typedef struct {} Decoder;
 typedef struct {} Lattice;
 typedef struct {} NBestList;
 typedef struct {} SegmentList;
+
 
 #ifdef HAS_DOC
 %include pydoc.i
@@ -138,7 +154,7 @@ typedef struct {} SegmentList;
 
 %extend Hypothesis {
     Hypothesis(char const *hypstr, int best_score, int prob) {
-        Hypothesis *h = ckd_malloc(sizeof *h);
+        Hypothesis *h = (Hypothesis *)ckd_malloc(sizeof *h);
         if (hypstr)
             h->hypstr = ckd_salloc(hypstr);
         else
@@ -161,7 +177,7 @@ typedef struct {} SegmentList;
 	Segment *seg;
 	if (!itor)
 	    return NULL;
-	seg = ckd_malloc(sizeof(Segment));
+	seg = (Segment *)ckd_malloc(sizeof(Segment));
 	seg->word = ckd_salloc(ps_seg_word(itor));
 	seg->prob = ps_seg_prob(itor, &(seg->ascore), &(seg->lscore), &(seg->lback));
 	ps_seg_frames(itor, &seg->start_frame, &seg->end_frame);
@@ -179,7 +195,7 @@ typedef struct {} SegmentList;
 	NBest *nbest;
 	if (!itor)
 	    return NULL;
-	nbest = ckd_malloc(sizeof(NBest));
+	nbest = (NBest *)ckd_malloc(sizeof(NBest));
 	nbest->hypstr = ckd_salloc(ps_nbest_hyp(itor, &(nbest->score)));
 	return nbest;
     }
@@ -193,27 +209,6 @@ typedef struct {} SegmentList;
 	ckd_free($self->hypstr);
 	ckd_free($self);
     }
-}
-
-
-%extend SegmentList {
-  SegmentList(ps_decoder_t *ptr) {
-    return ptr; 
-  }
-  %newobject __iter__;
-  SegmentIterator * __iter__() {
-    int32 best_score;
-    return new_SegmentIterator(ps_seg_iter($self, &best_score));
-  }
-}
-%extend NBestList {
-  NBestList(ps_decoder_t *ptr) {
-    return ptr; 
-  }
-  %newobject __iter__;
-  NBestIterator * __iter__() {
-    return new_NBestIterator(ps_nbest_next(ps_nbest($self, 0, -1, NULL, NULL)));
-  }
 }
 
 %include ps_decoder.i

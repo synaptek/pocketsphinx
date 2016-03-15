@@ -130,10 +130,22 @@
         ckd_free_2d(feats);
         return *errcode;
     }
-#else
+#elif SWIGJAVASCRIPT
+    int process_raw(SWIG_Object ptr, bool no_search, bool full_utt,
+                int *errcode) {
+	int16* data = (int16*) node::Buffer::Data(ptr);
+	size_t length = node::Buffer::Length(ptr) / sizeof(int16);
+        return *errcode = ps_process_raw($self, data, length, no_search, full_utt);
+    }
+#elif SWIGJAVA
     int process_raw(const int16 *SDATA, size_t NSAMP, bool no_search, bool full_utt,
                 int *errcode) {
         return *errcode = ps_process_raw($self, SDATA, NSAMP, no_search, full_utt);
+    }
+#elif SWIGRUBY
+    int process_raw(const char* STRING, size_t SIZE, bool no_search, bool full_utt,
+                int *errcode) {
+        return *errcode = ps_process_raw($self, (const int16 *)STRING, SIZE / 2, no_search, full_utt);
     }
 #endif
 
